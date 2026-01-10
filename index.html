@@ -2,44 +2,352 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>Vertragsprüfung für kleine Unternehmen</title>
-    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SignContracts - Verträge sicher prüfen</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        header {
+            background: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        nav {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #ff8c42;
+        }
+
+        .nav-btn {
+            background: #ffc099;
+            color: #333;
+            border: none;
+            padding: 0.8rem 2rem;
+            border-radius: 25px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .nav-btn:hover {
+            background: #ff8c42;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 140, 66, 0.3);
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #ffffff 0%, #fff5ed 100%);
+            padding: 6rem 2rem;
+            text-align: center;
+        }
+
+        .hero-content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 1.5rem;
+            color: #222;
+        }
+
+        .hero h1 span {
+            color: #ff8c42;
+        }
+
+        .hero-subtitle {
+            font-size: 1.3rem;
+            color: #666;
+            margin-bottom: 2rem;
+            line-height: 1.8;
+        }
+
+        .cta-button {
+            background: #ff8c42;
+            color: white;
+            border: none;
+            padding: 1.2rem 3rem;
+            font-size: 1.1rem;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            box-shadow: 0 5px 20px rgba(255, 140, 66, 0.3);
+        }
+
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(255, 140, 66, 0.4);
+        }
+
+        .features {
+            padding: 5rem 2rem;
+            background: white;
+        }
+
+        .features-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+            color: #222;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .feature-card {
+            background: #fff;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+            transition: all 0.3s;
+            border: 2px solid #ffc099;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(255, 140, 66, 0.2);
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature-card h3 {
+            color: #ff8c42;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+
+        .feature-card p {
+            color: #666;
+            line-height: 1.8;
+        }
+
+        .how-it-works {
+            padding: 5rem 2rem;
+            background: linear-gradient(135deg, #fff5ed 0%, #ffffff 100%);
+        }
+
+        .steps-container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .step {
+            display: flex;
+            align-items: center;
+            margin-bottom: 3rem;
+            gap: 2rem;
+        }
+
+        .step-number {
+            background: #ff8c42;
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .step-content h3 {
+            color: #222;
+            margin-bottom: 0.5rem;
+        }
+
+        .step-content p {
+            color: #666;
+        }
+
+        .cta-section {
+            padding: 5rem 2rem;
+            background: #ff8c42;
+            color: white;
+            text-align: center;
+        }
+
+        .cta-section h2 {
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .cta-section p {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+
+        .cta-white-button {
+            background: white;
+            color: #ff8c42;
+            border: none;
+            padding: 1.2rem 3rem;
+            font-size: 1.1rem;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .cta-white-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+        }
+
+        footer {
+            background: #222;
+            color: white;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        footer p {
+            opacity: 0.8;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .hero-subtitle {
+                font-size: 1.1rem;
+            }
+
+            .step {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+    </style>
 </head>
 <body>
+    <header>
+        <nav>
+            <div class="logo">SignContracts</div>
+            <button class="nav-btn" onclick="window.location.href='login.html'">Anmelden</button>
+        </nav>
+    </header>
 
-<div class="container">
-    <h1>KI-Vertragsprüfung</h1>
-    <p class="subtitle">
-        Erste Risikoanalyse für IT- und Service-Wartungsverträge.<br>
-        Ergebnis in unter 3 Minuten. Keine Rechtsberatung.
-    </p>
+    <section class="hero">
+        <div class="hero-content">
+            <h1>Verträge prüfen, <span>bevor Sie unterschreiben</span></h1>
+            <p class="hero-subtitle">Erstprüfung von IT- & Wartungsverträgen für Handwerksbetriebe – KI-gestützt, schnell und zuverlässig.</p>
+            <button class="cta-button" onclick="window.location.href='login.html'">Jetzt kostenlos testen</button>
+        </div>
+    </section>
 
-    <input type="file" id="fileInput" accept="application/pdf">
-    <button onclick="uploadContract()">Vertrag analysieren</button>
+    <section class="features">
+        <div class="features-container">
+            <h2 class="section-title">Warum SignContracts?</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Schnelle Analyse</h3>
+                    <p>Ergebnisse in unter 3 Minuten. Keine lange Wartezeit – laden Sie Ihren Vertrag hoch und erhalten Sie sofort eine erste Risikoeinschätzung.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3>Klare Empfehlungen</h3>
+                    <p>Ampel-System (Rot/Gelb/Grün) zeigt sofort Handlungsbedarf. Plus konkrete Handlungsempfehlungen für Ihr Unternehmen.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔒</div>
+                    <h3>Datenschutz</h3>
+                    <p>Ihre Verträge bleiben vertraulich. Sichere Verarbeitung nach deutschen Datenschutzstandards.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">💰</div>
+                    <h3>Kosteneffizient</h3>
+                    <p>Keine teuren Anwaltskosten für die Erstprüfung. Perfekt für kleine Betriebe mit begrenztem Budget.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🤖</div>
+                    <h3>KI-gestützt</h3>
+                    <p>Moderne Technologie erkennt automatisch kritische Klauseln in IT- und Wartungsverträgen.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📧</div>
+                    <h3>Email-Vorlagen</h3>
+                    <p>Fertige Vorlagen für Rückfragen an Vertragspartner – einfach kopieren und versenden.</p>
+                </div>
+            </div>
+        </div>
+    </section>
 
-    <div id="loading" class="hidden">Analyse läuft …</div>
+    <section class="how-it-works">
+        <div class="steps-container">
+            <h2 class="section-title">So funktioniert's</h2>
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3>PDF hochladen</h3>
+                    <p>Laden Sie Ihren Vertrag als PDF-Datei hoch. Unterstützt werden alle gängigen Vertragsarten.</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3>KI analysiert</h3>
+                    <p>Unsere KI prüft automatisch: Laufzeiten, Kündigungsfristen, Kosten, Haftung und mehr.</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3>Ergebnis erhalten</h3>
+                    <p>Sie erhalten eine übersichtliche Auswertung mit Ampel-Bewertung, Risiken und konkreten Handlungsempfehlungen.</p>
+                </div>
+            </div>
+        </div>
+    </section>
 
-    <div id="result" class="hidden">
+    <section class="cta-section">
+        <h2>Bereit für sichere Verträge?</h2>
+        <p>Starten Sie jetzt Ihre erste kostenlose Vertragsprüfung</p>
+        <button class="cta-white-button" onclick="window.location.href='login.html'">Jetzt registrieren</button>
+    </section>
 
-        <h2>Ergebnis</h2>
-
-        <div id="ampel" class="ampel"></div>
-
-        <h3>Top-Risiken</h3>
-        <ul id="risiken"></ul>
-
-        <h3>Empfehlungen</h3>
-        <ul id="empfehlungen"></ul>
-
-        <h3>Vorschlag für Nachverhandlung</h3>
-        <textarea id="mail" rows="8" readonly></textarea>
-
-        <p class="hint">
-            Hinweis: Diese Bewertung ersetzt keine Rechtsberatung.
-        </p>
-    </div>
-</div>
-
-<script src="script.js"></script>
+    <footer>
+        <p>&copy; 2026 SignContracts. Keine Rechtsberatung – Ersteinschätzung für Handwerksbetriebe.</p>
+    </footer>
 </body>
 </html>
