@@ -1,4 +1,4 @@
-const API_URL = "https://signcontracts-lastcall.onrender.com/analyse";
+const API_URL = "https://signcontracts-lastcall.onrender.com/analyze";
 
 async function uploadContract() {
     const fileInput = document.getElementById("fileInput");
