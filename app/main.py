@@ -1,8 +1,11 @@
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
 
+# ✅ 1. App erstellen
+app = FastAPI()
+
+# ✅ 2. CORS DIREKT danach (einmal, sauber)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -15,26 +18,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app = FastAPI()
-
-# ✅ CORS MUSS DIREKT NACH app = FastAPI() KOMMEN
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # MVP: erlaubt GitHub Pages
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
+# ✅ Health-Check
 @app.get("/")
 def health():
-    return {"status": "ok"}
+    return {"status": "SignContracts Backend läuft"}
 
+# ✅ Analyse-Endpoint
 @app.post("/analyze")
-async def analyse_contract(file: UploadFile = File(...)):
+async def analyze_contract(file: UploadFile = File(...)):
     try:
-        # TEST: nur prüfen ob Upload ankommt
-        content = await file.read()
+        # Test: prüfen ob Datei ankommt
+        _ = await file.read()
 
         return {
             "ampel": "gelb",
