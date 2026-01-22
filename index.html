@@ -263,7 +263,7 @@
     <header>
         <nav>
             <div class="logo">SignContracts</div>
-            <button class="nav-btn" onclick="window.location.href='login.html'">Anmelden</button>
+            <button class="nav-btn" onclick="window.location.href='upload.html'">Anmelden</button>
         </nav>
     </header>
 
@@ -271,7 +271,7 @@
         <div class="hero-content">
             <h1>Verträge prüfen, <span>bevor Sie unterschreiben</span></h1>
             <p class="hero-subtitle">Erstprüfung von IT- & Wartungsverträgen für Handwerksbetriebe – KI-gestützt, schnell und zuverlässig.</p>
-            <button class="cta-button" onclick="window.location.href='login.html'">Jetzt kostenlos testen</button>
+            <button class="cta-button" onclick="window.location.href='upload.html'">Jetzt kostenlos testen</button>
         </div>
     </section>
 
@@ -343,11 +343,105 @@
     <section class="cta-section">
         <h2>Bereit für sichere Verträge?</h2>
         <p>Starten Sie jetzt Ihre erste kostenlose Vertragsprüfung</p>
-        <button class="cta-white-button" onclick="window.location.href='login.html'">Jetzt registrieren</button>
+        <button class="cta-white-button" onclick="window.location.href='upload.html'">Jetzt registrieren</button>
     </section>
 
     <footer>
         <p>&copy; 2026 SignContracts. Keine Rechtsberatung – Ersteinschätzung für Handwerksbetriebe.</p>
     </footer>
+    <section id="upload" style="padding:4rem 2rem; background:#fff5ed;">
+    <div style="max-width:600px; margin:0 auto; text-align:center;">
+        <h2 style="margin-bottom:1rem;">Vertrag hochladen</h2>
+        <p style="margin-bottom:2rem;">PDF auswählen und automatisch analysieren lassen</p>
+
+        <input type="file" id="fileInput" accept="application/pdf" />
+        <br><br>
+        <button onclick="uploadContract()" style="
+            background:#ff8c42;
+            color:white;
+            border:none;
+            padding:0.8rem 2rem;
+            border-radius:20px;
+            cursor:pointer;
+        ">
+            Vertrag analysieren
+        </button>
+
+        <p id="loading" style="display:none; margin-top:1rem;">Analyse läuft …</p>
+
+        <div id="result" style="display:none; margin-top:2rem; text-align:left;">
+            <h3>Ampel: <span id="ampel"></span></h3>
+
+            <h4>Risiken</h4>
+            <ul id="risiken"></ul>
+
+            <h4>Empfehlungen</h4>
+            <ul id="empfehlungen"></ul>
+
+            <h4>E-Mail-Vorschlag</h4>
+            <textarea id="mail" rows="5" style="width:100%;"></textarea>
+        </div>
+    </div>
+</section>
+<script>
+const API_URL = "https://signcontracts-lastcall.onrender.com/analyze";
+
+async function uploadContract() {
+    const fileInput = document.getElementById("fileInput");
+    if (!fileInput.files.length) {
+        alert("Bitte PDF auswählen");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", fileInput.files[0]);
+
+    document.getElementById("loading").style.display = "block";
+    document.getElementById("result").style.display = "none";
+
+    let response;
+    try {
+        response = await fetch(API_URL, {
+            method: "POST",
+            body: formData
+        });
+    } catch (e) {
+        alert("Backend nicht erreichbar");
+        document.getElementById("loading").style.display = "none";
+        return;
+    }
+
+    if (!response.ok) {
+        alert("Analyse fehlgeschlagen");
+        document.getElementById("loading").style.display = "none";
+        return;
+    }
+
+    const data = await response.json();
+
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("result").style.display = "block";
+
+    document.getElementById("ampel").innerText = data.ampel;
+
+    const risikoList = document.getElementById("risiken");
+    risikoList.innerHTML = "";
+    data.top_risiken.forEach(r => {
+        const li = document.createElement("li");
+        li.innerText = r.beschreibung;
+        risikoList.appendChild(li);
+    });
+
+    const empList = document.getElementById("empfehlungen");
+    empList.innerHTML = "";
+    data.empfehlungen.forEach(e => {
+        const li = document.createElement("li");
+        li.innerText = e;
+        empList.appendChild(li);
+    });
+
+    document.getElementById("mail").value = data.mail.text;
+}
+</script>
 </body>
 </html>
