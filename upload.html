@@ -1,63 +1,25 @@
 <!DOCTYPE html>
-<html lang="de">
-<head>
-<meta charset="UTF-8">
-<title>SignContracts – Upload</title>
-</head>
-<body style="font-family:sans-serif; padding:2rem;">
+<html>
+<body>
 
-<h1>Vertrag analysieren</h1>
+<input type="file" id="file">
+<button onclick="send()">Upload</button>
 
-<input type="file" id="fileInput" accept="application/pdf">
-<br><br>
-<button onclick="uploadContract()">Analysieren</button>
-
-<p id="loading" style="display:none;">Analyse läuft …</p>
-
-<div id="result" style="display:none;">
-    <h2>Ampel: <span id="ampel"></span></h2>
-
-    <h3>Risiken</h3>
-    <ul id="risiken"></ul>
-
-    <h3>Empfehlungen</h3>
-    <ul id="empfehlungen"></ul>
-
-    <h3>E-Mail</h3>
-    <textarea id="mail" rows="5" style="width:100%;"></textarea>
-</div>
+<pre id="out"></pre>
 
 <script>
-const API_URL = "https://signcontracts-lastcall.onrender.com/analyze";
-
-async function uploadContract() {
-    const file = document.getElementById("fileInput").files[0];
-    if (!file) return alert("Bitte PDF auswählen");
-
+async function send() {
+    const f = document.getElementById("file").files[0];
     const fd = new FormData();
-    fd.append("file", file);
+    fd.append("file", f);
 
-    document.getElementById("loading").style.display = "block";
+    const r = await fetch(
+        "https://signcontracts-lastcall.onrender.com/analyze",
+        { method: "POST", body: fd }
+    );
 
-    const res = await fetch(API_URL, {
-        method: "POST",
-        body: fd
-    });
-
-    const data = await res.json();
-
-    document.getElementById("loading").style.display = "none";
-    document.getElementById("result").style.display = "block";
-
-    document.getElementById("ampel").innerText = data.ampel;
-
-    document.getElementById("risiken").innerHTML =
-        data.top_risiken.map(r => `<li>${r.beschreibung}</li>`).join("");
-
-    document.getElementById("empfehlungen").innerHTML =
-        data.empfehlungen.map(e => `<li>${e}</li>`).join("");
-
-    document.getElementById("mail").value = data.mail.text;
+    const t = await r.text();
+    document.getElementById("out").innerText = t;
 }
 </script>
 
