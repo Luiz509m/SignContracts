@@ -1,25 +1,77 @@
 <!DOCTYPE html>
-<html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Vertrag analysieren</title>
+    <style>
+        body { font-family: Arial; padding: 40px; }
+        .ampel { font-weight: bold; font-size: 20px; }
+        .gelb { color: orange; }
+        .rot { color: red; }
+        .gruen { color: green; }
+    </style>
+</head>
 <body>
 
-<input type="file" id="file">
-<button onclick="send()">Upload</button>
+<h1>Vertrag analysieren</h1>
 
-<pre id="out"></pre>
+<input type="file" id="fileInput">
+<button onclick="upload()">Analysieren</button>
+
+<p id="status"></p>
+
+<h2 class="ampel" id="ampel"></h2>
+
+<h3>Risiken</h3>
+<ul id="risiken"></ul>
+
+<h3>Empfehlungen</h3>
+<ul id="empfehlungen"></ul>
+
+<h3>Mail-Vorschlag</h3>
+<textarea id="mail" rows="4" cols="60"></textarea>
 
 <script>
-async function send() {
-    const f = document.getElementById("file").files[0];
+const API = "https://signcontracts-lastcall.onrender.com/analyze";
+
+async function upload() {
+    const file = document.getElementById("fileInput").files[0];
+    if (!file) {
+        alert("Bitte PDF auswählen");
+        return;
+    }
+
+    document.getElementById("status").innerText = "Analyse läuft...";
+
     const fd = new FormData();
-    fd.append("file", f);
+    fd.append("file", file);
 
-    const r = await fetch(
-        "https://signcontracts-lastcall.onrender.com/analyze",
-        { method: "POST", body: fd }
-    );
+    const res = await fetch(API, { method: "POST", body: fd });
+    const data = await res.json();
 
-    const t = await r.text();
-    document.getElementById("out").innerText = t;
+    document.getElementById("status").innerText = "Analyse abgeschlossen";
+
+    const ampel = document.getElementById("ampel");
+    ampel.innerText = data.ampel.toUpperCase();
+    ampel.className = "ampel " + data.ampel;
+
+    const r = document.getElementById("risiken");
+    r.innerHTML = "";
+    data.top_risiken.forEach(x => {
+        const li = document.createElement("li");
+        li.innerText = x.beschreibung;
+        r.appendChild(li);
+    });
+
+    const e = document.getElementById("empfehlungen");
+    e.innerHTML = "";
+    data.empfehlungen.forEach(x => {
+        const li = document.createElement("li");
+        li.innerText = x;
+        e.appendChild(li);
+    });
+
+    document.getElementById("mail").value = data.mail.text;
 }
 </script>
 
