@@ -2,37 +2,67 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>Vertrag analysieren</title>
+    <title>SignContracts – Vertragsanalyse</title>
     <style>
-        body { font-family: Arial; padding: 40px; }
-        .ampel { font-weight: bold; font-size: 20px; }
-        .gelb { color: orange; }
-        .rot { color: red; }
-        .gruen { color: green; }
+        body {
+            font-family: Arial, sans-serif;
+            background: #f6f6f6;
+            padding: 40px;
+        }
+
+        .box {
+            max-width: 600px;
+            margin: auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: #ff8c42;
+            border: none;
+            color: white;
+            cursor: pointer;
+        }
+
+        #loading {
+            margin-top: 20px;
+            display: none;
+        }
+
+        #result {
+            margin-top: 30px;
+            display: none;
+        }
     </style>
 </head>
 <body>
 
-<h1>Vertrag analysieren</h1>
+<div class="box">
+    <h2>Vertrag analysieren</h2>
 
-<input type="file" id="fileInput">
-<button onclick="upload()">Analysieren</button>
+    <input type="file" id="fileInput" accept="application/pdf"><br><br>
+    <button onclick="upload()">Analyse starten</button>
 
-<p id="status"></p>
+    <div id="loading">Analyse läuft…</div>
 
-<h2 class="ampel" id="ampel"></h2>
+    <div id="result">
+        <h3>Ampel: <span id="ampel"></span></h3>
 
-<h3>Risiken</h3>
-<ul id="risiken"></ul>
+        <h4>Risiken</h4>
+        <ul id="risiken"></ul>
 
-<h3>Empfehlungen</h3>
-<ul id="empfehlungen"></ul>
+        <h4>Empfehlungen</h4>
+        <ul id="empfehlungen"></ul>
 
-<h3>Mail-Vorschlag</h3>
-<textarea id="mail" rows="4" cols="60"></textarea>
+        <h4>Email-Vorschlag</h4>
+        <textarea id="mail" rows="4" style="width:100%"></textarea>
+    </div>
+</div>
 
 <script>
-const API = "https://signcontracts-lastcall.onrender.com/analyze";
+const API_URL = "https://signcontracts-lastcall.onrender.com/analyze";
 
 async function upload() {
     const file = document.getElementById("fileInput").files[0];
@@ -41,19 +71,29 @@ async function upload() {
         return;
     }
 
-    document.getElementById("status").innerText = "Analyse läuft...";
+    const formData = new FormData();
+    formData.append("file", file);
 
-    const fd = new FormData();
-    fd.append("file", file);
+    document.getElementById("loading").style.display = "block";
+    document.getElementById("result").style.display = "none";
 
-    const res = await fetch(API, { method: "POST", body: fd });
-    const data = await res.json();
+    const response = await fetch(API_URL, {
+        method: "POST",
+        body: formData
+    });
 
-    document.getElementById("status").innerText = "Analyse abgeschlossen";
+    if (!response.ok) {
+        alert("Analyse fehlgeschlagen");
+        document.getElementById("loading").style.display = "none";
+        return;
+    }
 
-    const ampel = document.getElementById("ampel");
-    ampel.innerText = data.ampel.toUpperCase();
-    ampel.className = "ampel " + data.ampel;
+    const data = await response.json();
+
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("result").style.display = "block";
+
+    document.getElementById("ampel").innerText = data.ampel.toUpperCase();
 
     const r = document.getElementById("risiken");
     r.innerHTML = "";
