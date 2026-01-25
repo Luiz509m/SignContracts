@@ -1,11 +1,17 @@
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://luiz509m.github.io",
+        "http://localhost:5500",
+        "http://127.0.0.1:5500"
+    ],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -16,18 +22,31 @@ def health():
 
 @app.post("/analyze")
 async def analyze_contract(file: UploadFile = File(...)):
-    await file.read()
+    try:
+        content = await file.read()
 
-    return {
-        "ampel": "gelb",
-        "top_risiken": [
-            {"beschreibung": "Keine SLA definiert"}
-        ],
-        "empfehlungen": [
-            "SLA vertraglich festhalten"
-        ],
-        "mail": {
-            "text": "Bitte SLA nachreichen."
-        },
-        "hinweis": "Keine Rechtsberatung"
-    }
+        if not content:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "Leere Datei"}
+            )
+
+        return {
+            "ampel": "gelb",
+            "top_risiken": [
+                {"beschreibung": "Keine SLA definiert"}
+            ],
+            "empfehlungen": [
+                "SLA vertraglich festhalten"
+            ],
+            "mail": {
+                "text": "Bitte SLA nachreichen."
+            },
+            "hinweis": "Keine Rechtsberatung"
+        }
+
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": str(e)}
+        )
