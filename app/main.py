@@ -9,7 +9,20 @@ from app.auth import (
 )
 
 app = FastAPI()
+@app.post("/analyze")
+async def analyze(
+    file: UploadFile = File(...),
+    user = Depends(get_current_user)
+):
+    content = await file.read()
+    text = content.decode(errors="ignore")
 
+    result = analyze_contract(text)
+
+    return {
+        "user": user["email"],
+        **result
+    }
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://deinname.github.io"],
