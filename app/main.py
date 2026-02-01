@@ -1,36 +1,56 @@
-from fastapi import FastAPI, UploadFile, File, Depends, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+
+from app.ai_analyzer import analyze_contract
 from app.auth import (
     users_db,
     hash_password,
     verify_password,
     create_access_token,
-    get_current_user
 )
 
 app = FastAPI()
-@app.post("/analyze")
-async def analyze(
-    file: UploadFile = File(...),
-    user = Depends(get_current_user)
-):
-    content = await file.read()
-    text = content.decode(errors="ignore")
 
-    result = analyze_contract(text)
-
-    return {
-        "user": user["email"],
-        **result
-    }
+# ========================
+# CORS – MUSS HIER STEHEN
+# ========================
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://deinname.github.io"],
+    allow_origins=[
+        "http://localhost:5500",
+        "http://127.0.0.1:5500",
+        "https://luiz509m.github.io",   # <- dein GitHub Pages
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# ========================
+# Health Check (Render!)
+# ========================
+@app.get("/")
+def health():
+    return {"status": "SignContracts Backend läuft"}
+
+# ========================
+# ANALYSE (noch OHNE Login)
+# ========================
+@app.post("/analyze")
+async def analyze(file: UploadFile = File(...)):
+    try:
+        content = await file.read()
+        text = content.decode(errors="ignore")
+
+        result = analyze_contract(text)
+        return result
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ========================
+# REGISTRIEREN
+# ========================
 @app.post("/register")
 def register(email: str, password: str):
     if email in users_db:
@@ -38,10 +58,13 @@ def register(email: str, password: str):
 
     users_db[email] = {
         "email": email,
-        "password": hash_password(password)
+        "password": hash_password(password),
     }
     return {"message": "Registrierung erfolgreich"}
 
+# ========================
+# LOGIN
+# ========================
 @app.post("/login")
 def login(email: str, password: str):
     user = users_db.get(email)
@@ -49,4 +72,7 @@ def login(email: str, password: str):
         raise HTTPException(status_code=401, detail="Falsche Login-Daten")
 
     token = create_access_token({"sub": email})
-    return {"access_token": token, "token_type": "bearer"}
+    return {
+        "access_token": token,
+        "token_type": "bearer"
+    }
