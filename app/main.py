@@ -38,12 +38,12 @@ def health():
 # ========================
 @app.post("/analyze")
 async def analyze(file: UploadFile = File(...)):
-    try:
-        content = await file.read()
-        text = content.decode(errors="ignore")
+    content = await file.read()
+    text = content.decode(errors="ignore")
 
-        result = analyze_contract(text)
-        return result
+    result = analyze_contract(text)
+    return result
+
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
