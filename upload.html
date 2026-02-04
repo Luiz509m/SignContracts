@@ -2,21 +2,95 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>Vertrag analysieren</title>
-    <link rel="stylesheet" href="css/style.css">
+    <title>SignContracts – Vertragsanalyse</title>
+
+    <!-- Optional: eigenes CSS -->
+    <!-- <link rel="stylesheet" href="css/style.css"> -->
+
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #f6f7f9;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: auto;
+        }
+
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+        }
+
+        button {
+            background: #ff8c42;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .ampel {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 999px;
+            font-weight: bold;
+            margin-bottom: 16px;
+        }
+
+        .ampel.rot {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .ampel.gelb {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .ampel.gruen {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 120px;
+        }
+    </style>
 </head>
 <body>
 
 <div class="container">
+
+    <!-- UPLOAD -->
     <div class="card">
         <h1>Vertrag analysieren</h1>
+
         <input type="file" id="fileInput" accept="application/pdf">
         <br><br>
+
         <button onclick="uploadContract()">Analyse starten</button>
+
+        <div id="loading" style="display:none; margin-top:15px;">
+            Analyse läuft…
+        </div>
     </div>
 
+    <!-- RESULT -->
     <div class="card" id="result" style="display:none;">
-        <div class="ampel gelb">Ampel: <span id="ampel"></span></div>
+
+        <div id="ampel" class="ampel"></div>
+
+        <h3>Zusammenfassung</h3>
+        <p id="summary"></p>
 
         <h3>Risiken</h3>
         <ul id="risiken"></ul>
@@ -25,10 +99,13 @@
         <ul id="empfehlungen"></ul>
 
         <h3>Email-Vorschlag</h3>
-        <textarea id="mail" style="width:100%; min-height:100px;"></textarea>
+        <textarea id="mail"></textarea>
     </div>
+
 </div>
 
-<script src="js/upload.js"></script>
+<!-- WICHTIG: Datei muss existieren -->
+<script src="script.js"></script>
+
 </body>
 </html>
