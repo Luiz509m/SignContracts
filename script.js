@@ -1,7 +1,11 @@
+<script>
 const API_URL = "https://signcontracts-lastcall.onrender.com/analyze";
 
 async function uploadContract() {
     const fileInput = document.getElementById("fileInput");
+    const loading = document.getElementById("loading");
+    const result = document.getElementById("result");
+
     if (!fileInput.files.length) {
         alert("Bitte PDF auswählen");
         return;
@@ -10,8 +14,9 @@ async function uploadContract() {
     const formData = new FormData();
     formData.append("file", fileInput.files[0]);
 
-    document.getElementById("loading").classList.remove("hidden");
-    document.getElementById("result").classList.add("hidden");
+    // UI reset
+    loading.style.display = "block";
+    result.style.display = "none";
 
     let response;
     try {
@@ -19,46 +24,68 @@ async function uploadContract() {
             method: "POST",
             body: formData
         });
-    } catch (error) {
-        alert("Server nicht erreichbar. Bitte 20–30 Sekunden warten und erneut versuchen.");
-        document.getElementById("loading").classList.add("hidden");
+    } catch (err) {
+        loading.style.display = "none";
+        alert("Backend nicht erreichbar. Bitte kurz warten und erneut versuchen.");
         return;
     }
 
     if (!response.ok) {
-        alert("Fehler bei der Analyse. Bitte erneut versuchen.");
-        document.getElementById("loading").classList.add("hidden");
+        loading.style.display = "none";
+        alert("Analyse fehlgeschlagen.");
         return;
     }
 
     const data = await response.json();
 
-    document.getElementById("loading").classList.add("hidden");
-    document.getElementById("result").classList.remove("hidden");
-
-    // Ampel
+    // ---------- AMPPEL ----------
     const ampel = document.getElementById("ampel");
-    ampel.textContent = data.ampel.toUpperCase();
+    ampel.innerText = "AMPEL: " + data.ampel.toUpperCase();
     ampel.className = "ampel " + data.ampel;
 
-    // Risiken
+    // ---------- ZUSAMMENFASSUNG ----------
+    document.getElementById("summary").innerText =
+        data.zusammenfassung || "Keine Zusammenfassung verfügbar.";
+
+    // ---------- RISIKEN (checks) ----------
     const risikoList = document.getElementById("risiken");
     risikoList.innerHTML = "";
-    data.top_risiken.forEach(r => {
-        const li = document.createElement("li");
-        li.textContent = r.beschreibung;
-        risikoList.appendChild(li);
-    });
 
-    // Empfehlungen
+    if (data.checks) {
+        for (const key in data.checks) {
+            const check = data.checks[key];
+            const li = document.createElement("li");
+            li.innerText = `${key.toUpperCase()}: ${check.text}`;
+            risikoList.appendChild(li);
+        }
+    } else {
+        const li = document.createElement("li");
+        li.innerText = "Keine Risiken erkannt.";
+        risikoList.appendChild(li);
+    }
+
+    // ---------- EMPFEHLUNGEN ----------
     const empList = document.getElementById("empfehlungen");
     empList.innerHTML = "";
-    data.empfehlungen.forEach(e => {
-        const li = document.createElement("li");
-        li.textContent = e;
-        empList.appendChild(li);
-    });
 
-    // Mail
-    document.getElementById("mail").value = data.mail.text;
+    if (data.empfehlungen && data.empfehlungen.length > 0) {
+        data.empfehlungen.forEach(e => {
+            const li = document.createElement("li");
+            li.innerText = e;
+            empList.appendChild(li);
+        });
+    } else {
+        const li = document.createElement("li");
+        li.innerText = "Keine Empfehlungen verfügbar.";
+        empList.appendChild(li);
+    }
+
+    // ---------- EMAIL ----------
+    document.getElementById("mail").value =
+        data.mail?.text || "Kein Email-Vorschlag vorhanden.";
+
+    // UI anzeigen
+    loading.style.display = "none";
+    result.style.display = "block";
 }
+</script>
