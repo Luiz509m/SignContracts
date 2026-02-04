@@ -22,48 +22,49 @@ async function uploadContract() {
             body: formData
         });
 
-        if (!response.ok) {
-            throw new Error("Backend-Fehler");
+        const text = await response.text();
+        let data;
+
+        try {
+            data = JSON.parse(text);
+        } catch {
+            throw new Error("Backend hat kein JSON geliefert");
         }
 
-        const data = await response.json();
-
-        // Ampel
+        // 🔴 Ampel
+        const ampelValue = data.ampel || "unbekannt";
         const ampel = document.getElementById("ampel");
-        ampel.innerText = "AMPEL: " + data.ampel.toUpperCase();
-        ampel.className = "ampel " + data.ampel;
+        ampel.innerText = "AMPEL: " + ampelValue.toUpperCase();
+        ampel.className = "ampel " + ampelValue;
 
-        // Summary
-        document.getElementById("summary").innerText =
-            data.zusammenfassung || "Keine Zusammenfassung vorhanden.";
-
-        // Risiken
+        // 🔴 Risiken
         const risiken = document.getElementById("risiken");
         risiken.innerHTML = "";
-        data.top_risiken.forEach(r => {
+        (data.top_risiken || []).forEach(r => {
             const li = document.createElement("li");
-            li.innerText = r.beschreibung;
+            li.innerText = r.beschreibung || r;
             risiken.appendChild(li);
         });
 
-        // Empfehlungen
+        // 🔴 Empfehlungen
         const empfehlungen = document.getElementById("empfehlungen");
         empfehlungen.innerHTML = "";
-        data.empfehlungen.forEach(e => {
+        (data.empfehlungen || []).forEach(e => {
             const li = document.createElement("li");
             li.innerText = e;
             empfehlungen.appendChild(li);
         });
 
-        // Mail
-        document.getElementById("mail").value = data.mail?.text || "";
+        // 🔴 Mail
+        document.getElementById("mail").value =
+            data.mail?.text || "";
 
         loading.style.display = "none";
         result.style.display = "block";
 
     } catch (err) {
         loading.style.display = "none";
-        alert("Analyse fehlgeschlagen – Backend erreichbar?");
-        console.error(err);
+        alert("Analyse fehlgeschlagen – siehe Konsole");
+        console.error("FEHLER:", err);
     }
 }
