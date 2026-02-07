@@ -2,110 +2,163 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>SignContracts – Vertragsanalyse</title>
-
-    <!-- Optional: eigenes CSS -->
-    <!-- <link rel="stylesheet" href="css/style.css"> -->
-
-    <style>
-        body {
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            background: #f6f7f9;
-            padding: 40px;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: auto;
-        }
-
-        .card {
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.06);
-        }
-
-        button {
-            background: #ff8c42;
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-
-        .ampel {
-            display: inline-block;
-            padding: 8px 16px;
-            border-radius: 999px;
-            font-weight: bold;
-            margin-bottom: 16px;
-        }
-
-        .ampel.rot {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        .ampel.gelb {
-            background: #fff3cd;
-            color: #856404;
-        }
-
-        .ampel.gruen {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        textarea {
-            width: 100%;
-            min-height: 120px;
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SignContracts - Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+    <!-- Login/Register Screen -->
+    <div id="auth-screen" class="auth-screen">
+        <div class="auth-container">
+            <div class="logo">SignContracts</div>
+            
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('login')">Anmelden</button>
+                <button class="tab" onclick="switchTab('register')">Registrieren</button>
+            </div>
 
-<div class="container">
+            <div id="error" class="error-message"></div>
+            <div id="success" class="success-message"></div>
 
-    <!-- UPLOAD -->
-    <div class="card">
-        <h1>Vertrag analysieren</h1>
+            <!-- Login Form -->
+            <div id="login-form" class="form-container active">
+                <form onsubmit="handleLogin(event)">
+                    <div class="form-group">
+                        <label for="login-email">E-Mail</label>
+                        <input type="email" id="login-email" required autocomplete="email">
+                    </div>
+                    <div class="form-group">
+                        <label for="login-password">Passwort</label>
+                        <input type="password" id="login-password" required autocomplete="current-password">
+                    </div>
+                    <button type="submit" class="submit-btn">Anmelden</button>
+                </form>
+            </div>
 
-        <input type="file" id="fileInput" accept="application/pdf">
-        <br><br>
+            <!-- Register Form -->
+            <div id="register-form" class="form-container">
+                <form onsubmit="handleRegister(event)">
+                    <div class="form-group">
+                        <label for="register-name">Firmenname</label>
+                        <input type="text" id="register-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-email">E-Mail</label>
+                        <input type="email" id="register-email" required autocomplete="email">
+                    </div>
+                    <div class="form-group">
+                        <label for="register-password">Passwort</label>
+                        <input type="password" id="register-password" required minlength="6" autocomplete="new-password">
+                        <div class="password-requirements">Mindestens 6 Zeichen</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-password-confirm">Passwort bestätigen</label>
+                        <input type="password" id="register-password-confirm" required autocomplete="new-password">
+                    </div>
+                    <button type="submit" class="submit-btn">Registrieren</button>
+                </form>
+            </div>
 
-        <button onclick="uploadContract()">Analyse starten</button>
-
-        <div id="loading" style="display:none; margin-top:15px;">
-            Analyse läuft…
+            <a href="index.html" class="back-link">← Zurück zur Startseite</a>
         </div>
     </div>
 
-    <!-- RESULT -->
-    <div class="card" id="result" style="display:none;">
+    <!-- Dashboard Screen -->
+    <div id="dashboard-screen" class="dashboard-screen" style="display: none;">
+        <header>
+            <nav>
+                <div class="logo">SignContracts</div>
+                <div class="user-info">
+                    <div class="user-badge">
+                        👤 <span id="userName"></span>
+                    </div>
+                    <button class="logout-btn" onclick="logout()">Abmelden</button>
+                </div>
+            </nav>
+        </header>
 
-        <div id="ampel" class="ampel"></div>
+        <div class="container">
+            <div class="hero-section">
+                <h1>Willkommen in Ihrem <span>Dashboard</span></h1>
+                <p>Laden Sie Ihren IT- oder Wartungsvertrag hoch und erhalten Sie eine erste KI-gestützte Risikoeinschätzung.</p>
+            </div>
 
-        <h3>Zusammenfassung</h3>
-        <p id="summary"></p>
+            <div class="upload-container">
+                <div class="section-header">
+                    <div class="section-icon">📄</div>
+                    <div>
+                        <h2>Vertrag hochladen</h2>
+                        <p style="color: #666; margin: 0;">Unterstützte Formate: PDF</p>
+                    </div>
+                </div>
 
-        <h3>Risiken</h3>
-        <ul id="risiken"></ul>
+                <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                    <div class="upload-icon">📤</div>
+                    <h3>Datei hier ablegen oder klicken</h3>
+                    <p>Ziehen Sie Ihren Vertrag per Drag & Drop hierher</p>
+                    <p class="upload-hint">Ideal für: IT-Verträge, Wartungsverträge, Serviceverträge</p>
+                </div>
 
-        <h3>Empfehlungen</h3>
-        <ul id="empfehlungen"></ul>
+                <input type="file" id="fileInput" accept=".pdf" onchange="handleFileSelect(event)">
 
-        <h3>Email-Vorschlag</h3>
-        <textarea id="mail"></textarea>
+                <div class="file-selected" id="fileSelected">
+                    <div class="file-info">
+                        <span class="file-icon">✅</span>
+                        <div>
+                            <strong id="fileName"></strong>
+                            <div style="font-size: 0.9rem; opacity: 0.8;">Bereit zur Analyse</div>
+                        </div>
+                    </div>
+                    <button class="remove-file" onclick="removeFile()">Entfernen</button>
+                </div>
+
+                <button class="analyze-btn" id="analyzeBtn" onclick="analyzeContract()" disabled>
+                    🚀 Vertrag jetzt analysieren
+                </button>
+            </div>
+
+            <!-- Loading -->
+            <div class="loading" id="loading">
+                <div class="spinner-container">
+                    <div class="spinner"></div>
+                </div>
+                <h3>Analyse läuft...</h3>
+                <p>⏱️ Die KI-Analyse kann 1-2 Minuten dauern.</p>
+                <p style="font-size: 0.9rem; color: #999; margin-top: 0.5rem;">Kostenloser Server - bitte Geduld haben 😊</p>
+            </div>
+
+            <!-- Results -->
+            <div class="results" id="results">
+                <div class="ampel-container">
+                    <div class="ampel-icon" id="ampelIcon">🚦</div>
+                    <div class="ampel-text" id="ampelText">BEWERTUNG</div>
+                    <p class="ampel-description" id="ampelDescription"></p>
+                </div>
+
+                <div class="result-section">
+                    <h3>🔴 Identifizierte Risiken</h3>
+                    <ul id="risikenList"></ul>
+                </div>
+
+                <div class="result-section">
+                    <h3>💡 Handlungsempfehlungen</h3>
+                    <ul id="empfehlungenList"></ul>
+                </div>
+
+                <div class="result-section">
+                    <h3>📧 E-Mail-Vorlage für Rückfragen</h3>
+                    <div class="mail-preview" id="mailPreview"></div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="new-analysis-btn" onclick="resetAnalysis()">
+                        ✨ Neue Analyse starten
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
-</div>
-
-<!-- WICHTIG: Datei muss existieren -->
-<script src="script.js"></script>
-
+    <script src="js/upload.js"></script>
 </body>
 </html>
