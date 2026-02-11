@@ -1,33 +1,7 @@
-// Backend URL - WICHTIG: Ändere das zu deiner Render-URL!
+// Backend URL - WICHTIG: Deine Render-URL hier eintragen!
 const API_URL = 'https://signcontracts-lastcall.onrender.com';
 
 // ==================== AUTH FUNCTIONS ====================
-
-// Check if user is logged in on page load
-window.onload = function() {
-    const token = localStorage.getItem('token');
-    
-    if (token) {
-        // User is logged in - show dashboard
-        showDashboard();
-    } else {
-        // User is not logged in - show auth screen
-        showAuthScreen();
-    }
-};
-
-function showAuthScreen() {
-    document.getElementById('auth-screen').style.display = 'flex';
-    document.getElementById('dashboard-screen').style.display = 'none';
-}
-
-function showDashboard() {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    
-    document.getElementById('auth-screen').style.display = 'none';
-    document.getElementById('dashboard-screen').style.display = 'block';
-    document.getElementById('userName').textContent = user.name || user.email || 'User';
-}
 
 function switchTab(tab) {
     // Update tabs
@@ -61,6 +35,46 @@ function hideMessages() {
     document.getElementById('success').style.display = 'none';
 }
 
+async function handleRegister(event) {
+    event.preventDefault();
+    hideMessages();
+
+    const name = document.getElementById('register-name').value;
+    const email = document.getElementById('register-email').value;
+    const password = document.getElementById('register-password').value;
+    const passwordConfirm = document.getElementById('register-password-confirm').value;
+
+    if (password !== passwordConfirm) {
+        showError('Passwörter stimmen nicht überein');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/auth/register`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ name, email, password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            showSuccess('Registrierung erfolgreich! Sie können sich jetzt anmelden.');
+            setTimeout(() => {
+                switchTab('login');
+                document.getElementById('login-email').value = email;
+            }, 1500);
+        } else {
+            showError(data.detail || 'Registrierung fehlgeschlagen');
+        }
+    } catch (error) {
+        showError('Verbindung zum Server fehlgeschlagen. Backend läuft möglicherweise nicht.');
+        console.error('Register error:', error);
+    }
+}
+
 async function handleLogin(event) {
     event.preventDefault();
     hideMessages();
@@ -90,49 +104,8 @@ async function handleLogin(event) {
             showError(data.detail || 'Login fehlgeschlagen');
         }
     } catch (error) {
-        showError('Verbindung zum Server fehlgeschlagen. Ist das Backend online?');
+        showError('Verbindung zum Server fehlgeschlagen. Backend läuft möglicherweise nicht.');
         console.error('Login error:', error);
-    }
-}
-
-async function handleRegister(event) {
-    event.preventDefault();
-    hideMessages();
-
-    const name = document.getElementById('register-name').value;
-    const email = document.getElementById('register-email').value;
-    const password = document.getElementById('register-password').value;
-    const passwordConfirm = document.getElementById('register-password-confirm').value;
-
-    // Validate passwords match
-    if (password !== passwordConfirm) {
-        showError('Passwörter stimmen nicht überein');
-        return;
-    }
-
-    try {
-        const response = await fetch(`${API_URL}/auth/register`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ name, email, password })
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-            showSuccess('Registrierung erfolgreich! Sie können sich jetzt anmelden.');
-            setTimeout(() => {
-                switchTab('login');
-                document.getElementById('login-email').value = email;
-            }, 2000);
-        } else {
-            showError(data.detail || 'Registrierung fehlgeschlagen');
-        }
-    } catch (error) {
-        showError('Verbindung zum Server fehlgeschlagen. Ist das Backend online?');
-        console.error('Register error:', error);
     }
 }
 
@@ -140,7 +113,23 @@ function logout() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     showAuthScreen();
-    resetAnalysis();
+}
+
+function showDashboard() {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    document.getElementById('userName').textContent = user.name || user.email;
+    
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('dashboard-screen').style.display = 'block';
+}
+
+function showAuthScreen() {
+    document.getElementById('auth-screen').style.display = 'flex';
+    document.getElementById('dashboard-screen').style.display = 'none';
+    
+    // Reset forms
+    document.querySelectorAll('form').forEach(f => f.reset());
+    hideMessages();
 }
 
 // ==================== FILE UPLOAD FUNCTIONS ====================
@@ -163,8 +152,6 @@ function removeFile() {
     document.getElementById('analyzeBtn').disabled = true;
 }
 
-// ==================== ANALYSIS FUNCTIONS ====================
-
 async function analyzeContract() {
     if (!selectedFile) {
         alert('Bitte wählen Sie eine PDF-Datei aus');
@@ -181,10 +168,10 @@ async function analyzeContract() {
     try {
         const token = localStorage.getItem('token');
         
-        // Timeout controller for long requests
+        // Timeout Controller - 120 Sekunden
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minutes
-
+        const timeoutId = setTimeout(() => controller.abort(), 120000);
+        
         const response = await fetch(`${API_URL}/analyze`, {
             method: 'POST',
             headers: {
@@ -211,11 +198,10 @@ async function analyzeContract() {
         document.querySelector('.upload-container').style.display = 'block';
         
         if (error.name === 'AbortError') {
-            alert('Analyse dauert zu lange. Bitte versuchen Sie es mit einem kürzeren Dokument oder später erneut.');
+            alert('Analyse-Timeout: Die Analyse dauerte zu lange. Bitte versuchen Sie es mit einem kürzeren Vertrag erneut.');
         } else {
-            alert('Verbindung zum Server fehlgeschlagen. Bitte prüfen Sie ob das Backend läuft.');
+            alert('Verbindung zum Server fehlgeschlagen. Stellen Sie sicher, dass das Backend läuft.');
         }
-        
         console.error('Analysis error:', error);
     }
 }
@@ -225,11 +211,7 @@ function displayResults(data) {
 
     // Ampel
     const ampelIcons = { gruen: '🟢', gelb: '🟡', rot: '🔴' };
-    const ampelTexts = { 
-        gruen: 'GRÜN - UNAUFFÄLLIG', 
-        gelb: 'GELB - PRÜFBEDARF', 
-        rot: 'ROT - KRITISCH' 
-    };
+    const ampelTexts = { gruen: 'GRÜN - UNAUFFÄLLIG', gelb: 'GELB - PRÜFBEDARF', rot: 'ROT - KRITISCH' };
     const ampelDescriptions = {
         gruen: 'Ihr Vertrag ist unauffällig. Die wichtigsten Punkte sind klar geregelt.',
         gelb: 'Ihr Vertrag enthält Punkte, die Sie genauer prüfen sollten.',
@@ -271,42 +253,49 @@ function resetAnalysis() {
 
 // ==================== DRAG & DROP ====================
 
-const uploadArea = document.querySelector('.upload-area');
-
-if (uploadArea) {
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        uploadArea.addEventListener(eventName, preventDefaults, false);
-    });
-
-    function preventDefaults(e) {
-        e.preventDefault();
-        e.stopPropagation();
+window.addEventListener('DOMContentLoaded', () => {
+    // Check if user is already logged in
+    const token = localStorage.getItem('token');
+    if (token) {
+        showDashboard();
     }
 
-    ['dragenter', 'dragover'].forEach(eventName => {
-        uploadArea.addEventListener(eventName, () => {
-            uploadArea.style.borderColor = '#ff8c42';
-            uploadArea.style.transform = 'scale(1.02)';
+    // Drag and drop support
+    const uploadArea = document.querySelector('.upload-area');
+    
+    if (uploadArea) {
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
         });
-    });
 
-    ['dragleave', 'drop'].forEach(eventName => {
-        uploadArea.addEventListener(eventName, () => {
-            uploadArea.style.borderColor = '#ffc099';
-            uploadArea.style.transform = 'scale(1)';
+        ['dragenter', 'dragover'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, () => {
+                uploadArea.style.borderColor = '#ff8c42';
+                uploadArea.style.transform = 'scale(1.02)';
+            });
         });
-    });
 
-    uploadArea.addEventListener('drop', (e) => {
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            const file = files[0];
-            if (file.type === 'application/pdf') {
-                document.getElementById('fileInput').files = files;
-                handleFileSelect({ target: { files: [file] } });
-            } else {
-                alert('Bitte laden Sie nur PDF-Dateien hoch');
+        ['dragleave', 'drop'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, () => {
+                uploadArea.style.borderColor = '#ffc099';
+                uploadArea.style.transform = 'scale(1)';
+            });
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                if (file.type === 'application/pdf') {
+                    document.getElementById('fileInput').files = files;
+                    handleFileSelect({ target: { files: [file] } });
+                } else {
+                    alert('Bitte laden Sie nur PDF-Dateien hoch');
+                }
             }
-        }
-    });
-}
+        });
+    }
+});
