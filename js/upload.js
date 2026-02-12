@@ -1,228 +1,251 @@
-// Backend URL - WICHTIG: Deine Render-URL hier eintragen!
-const API_URL = 'https://signcontracts-lastcall.onrender.com';
+const API_BASE = "https://signcontracts-lastcall.onrender.com";
 
-// ==================== AUTH FUNCTIONS ====================
+// ==================== TOKEN MANAGEMENT ====================
+function saveToken(token) {
+    localStorage.setItem('auth_token', token);
+}
 
+function getToken() {
+    return localStorage.getItem('auth_token');
+}
+
+function clearToken() {
+    localStorage.removeItem('auth_token');
+}
+
+function isLoggedIn() {
+    return !!getToken();
+}
+
+// ==================== PAGE LOAD ====================
+window.addEventListener('DOMContentLoaded', () => {
+    // Wenn schon eingeloggt -> direkt zum Dashboard
+    if (isLoggedIn()) {
+        showDashboard();
+    }
+});
+
+// ==================== TAB SWITCHING ====================
 function switchTab(tab) {
-    // Update tabs
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    event.target.classList.add('active');
-
-    // Update forms
-    document.querySelectorAll('.form-container').forEach(f => f.classList.remove('active'));
-    document.getElementById(tab + '-form').classList.add('active');
-
-    // Clear messages
-    hideMessages();
-}
-
-function showError(message) {
-    const errorDiv = document.getElementById('error');
-    errorDiv.textContent = message;
-    errorDiv.style.display = 'block';
-    document.getElementById('success').style.display = 'none';
-}
-
-function showSuccess(message) {
-    const successDiv = document.getElementById('success');
-    successDiv.textContent = message;
-    successDiv.style.display = 'block';
-    document.getElementById('error').style.display = 'none';
-}
-
-function hideMessages() {
-    document.getElementById('error').style.display = 'none';
-    document.getElementById('success').style.display = 'none';
-}
-
-async function handleRegister(event) {
-    event.preventDefault();
-    hideMessages();
-
-    const name = document.getElementById('register-name').value;
-    const email = document.getElementById('register-email').value;
-    const password = document.getElementById('register-password').value;
-    const passwordConfirm = document.getElementById('register-password-confirm').value;
-
-    if (password !== passwordConfirm) {
-        showError('Passwörter stimmen nicht überein');
-        return;
-    }
-
-    try {
-        const response = await fetch(`${API_URL}/auth/register`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ name, email, password })
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-            showSuccess('Registrierung erfolgreich! Sie können sich jetzt anmelden.');
-            setTimeout(() => {
-                switchTab('login');
-                document.getElementById('login-email').value = email;
-            }, 1500);
-        } else {
-            showError(data.detail || 'Registrierung fehlgeschlagen');
-        }
-    } catch (error) {
-        showError('Verbindung zum Server fehlgeschlagen. Backend läuft möglicherweise nicht.');
-        console.error('Register error:', error);
+    const loginForm = document.getElementById('login-form');
+    const registerForm = document.getElementById('register-form');
+    const tabs = document.querySelectorAll('.tab');
+    
+    clearMessages();
+    
+    if (tab === 'login') {
+        loginForm.classList.add('active');
+        registerForm.classList.remove('active');
+        tabs[0].classList.add('active');
+        tabs[1].classList.remove('active');
+    } else {
+        loginForm.classList.remove('active');
+        registerForm.classList.add('active');
+        tabs[0].classList.remove('active');
+        tabs[1].classList.add('active');
     }
 }
 
+// ==================== LOGIN ====================
 async function handleLogin(event) {
     event.preventDefault();
-    hideMessages();
-
+    clearMessages();
+    
     const email = document.getElementById('login-email').value;
     const password = document.getElementById('login-password').value;
-
+    
     try {
-        const response = await fetch(`${API_URL}/auth/login`, {
+        const response = await fetch(`${API_BASE}/auth/login`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({ email, password })
         });
-
+        
         const data = await response.json();
-
+        
         if (response.ok) {
-            // Save token and user
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('user', JSON.stringify(data.user));
+            // Token speichern
+            saveToken(data.token);
             
-            // Show dashboard
-            showDashboard();
+            // Zum Dashboard
+            showDashboard(data.user);
         } else {
             showError(data.detail || 'Login fehlgeschlagen');
         }
     } catch (error) {
-        showError('Verbindung zum Server fehlgeschlagen. Backend läuft möglicherweise nicht.');
-        console.error('Login error:', error);
+        showError('Netzwerkfehler - bitte versuchen Sie es erneut');
     }
 }
 
-function logout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    showAuthScreen();
+// ==================== REGISTER ====================
+async function handleRegister(event) {
+    event.preventDefault();
+    clearMessages();
+    
+    const name = document.getElementById('register-name').value;
+    const email = document.getElementById('register-email').value;
+    const password = document.getElementById('register-password').value;
+    const passwordConfirm = document.getElementById('register-password-confirm').value;
+    
+    if (password !== passwordConfirm) {
+        showError('Passwörter stimmen nicht überein');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/auth/register`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ name, email, password })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showSuccess('Registrierung erfolgreich! Bitte melden Sie sich an.');
+            switchTab('login');
+            
+            // Felder leeren
+            document.getElementById('register-name').value = '';
+            document.getElementById('register-email').value = '';
+            document.getElementById('register-password').value = '';
+            document.getElementById('register-password-confirm').value = '';
+        } else {
+            showError(data.detail || 'Registrierung fehlgeschlagen');
+        }
+    } catch (error) {
+        showError('Netzwerkfehler - bitte versuchen Sie es erneut');
+    }
 }
 
-function showDashboard() {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    document.getElementById('userName').textContent = user.name || user.email;
-    
+// ==================== LOGOUT ====================
+async function logout() {
+    const token = getToken();
+    if (token) {
+        try {
+            await fetch(`${API_BASE}/auth/logout`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+        } catch (error) {
+            console.log('Logout Fehler:', error);
+        }
+    }
+    clearToken();
+    window.location.reload();
+}
+
+// ==================== SHOW DASHBOARD ====================
+function showDashboard(user) {
     document.getElementById('auth-screen').style.display = 'none';
     document.getElementById('dashboard-screen').style.display = 'block';
-}
-
-function showAuthScreen() {
-    document.getElementById('auth-screen').style.display = 'flex';
-    document.getElementById('dashboard-screen').style.display = 'none';
     
-    // Reset forms
-    document.querySelectorAll('form').forEach(f => f.reset());
-    hideMessages();
+    // Username anzeigen (falls vorhanden)
+    if (user) {
+        document.getElementById('userName').textContent = user.name || user.email;
+    }
 }
 
-// ==================== FILE UPLOAD FUNCTIONS ====================
-
-let selectedFile = null;
-
+// ==================== FILE HANDLING ====================
 function handleFileSelect(event) {
-    selectedFile = event.target.files[0];
-    if (selectedFile) {
-        document.getElementById('fileName').textContent = selectedFile.name;
-        document.getElementById('fileSelected').classList.add('active');
+    const file = event.target.files[0];
+    if (file) {
+        document.getElementById('fileName').textContent = file.name;
+        document.getElementById('fileSelected').style.display = 'flex';
         document.getElementById('analyzeBtn').disabled = false;
     }
 }
 
 function removeFile() {
-    selectedFile = null;
     document.getElementById('fileInput').value = '';
-    document.getElementById('fileSelected').classList.remove('active');
+    document.getElementById('fileSelected').style.display = 'none';
     document.getElementById('analyzeBtn').disabled = true;
 }
 
+// ==================== ANALYZE CONTRACT ====================
 async function analyzeContract() {
-    if (!selectedFile) {
-        alert('Bitte wählen Sie eine PDF-Datei aus');
+    const fileInput = document.getElementById('fileInput');
+    const loading = document.getElementById('loading');
+    const results = document.getElementById('results');
+    
+    const token = getToken();
+    if (!token) {
+        alert("Sitzung abgelaufen. Bitte neu anmelden.");
+        logout();
         return;
     }
-
+    
+    if (!fileInput.files.length) {
+        alert("Bitte wählen Sie eine Datei aus");
+        return;
+    }
+    
     const formData = new FormData();
-    formData.append('file', selectedFile);
-
-    document.querySelector('.upload-container').style.display = 'none';
-    document.getElementById('loading').classList.add('active');
-    document.getElementById('results').classList.remove('active');
-
+    formData.append("file", fileInput.files[0]);
+    
+    loading.style.display = 'block';
+    results.style.display = 'none';
+    
     try {
-        const token = localStorage.getItem('token');
-        
-        // Timeout Controller - 120 Sekunden
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 120000);
-        
-        const response = await fetch(`${API_URL}/analyze`, {
+        const response = await fetch(`${API_BASE}/analyze`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`
             },
-            body: formData,
-            signal: controller.signal
+            body: formData
         });
-
-        clearTimeout(timeoutId);
-
-        const data = await response.json();
-
-        document.getElementById('loading').classList.remove('active');
-
-        if (response.ok) {
-            displayResults(data);
-        } else {
-            alert('Fehler bei der Analyse: ' + (data.detail || 'Unbekannter Fehler'));
-            document.querySelector('.upload-container').style.display = 'block';
-        }
-    } catch (error) {
-        document.getElementById('loading').classList.remove('active');
-        document.querySelector('.upload-container').style.display = 'block';
         
-        if (error.name === 'AbortError') {
-            alert('Analyse-Timeout: Die Analyse dauerte zu lange. Bitte versuchen Sie es mit einem kürzeren Vertrag erneut.');
-        } else {
-            alert('Verbindung zum Server fehlgeschlagen. Stellen Sie sicher, dass das Backend läuft.');
+        if (response.status === 401) {
+            alert("Sitzung abgelaufen. Bitte neu einloggen.");
+            logout();
+            return;
         }
-        console.error('Analysis error:', error);
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.detail || 'Analyse fehlgeschlagen');
+        }
+        
+        displayResults(data);
+        
+    } catch (error) {
+        alert(`Fehler bei der Analyse: ${error.message}`);
+        console.error('Analyse Fehler:', error);
+    } finally {
+        loading.style.display = 'none';
     }
 }
 
+// ==================== DISPLAY RESULTS ====================
 function displayResults(data) {
-    document.getElementById('results').classList.add('active');
-
+    const results = document.getElementById('results');
+    const ampelIcon = document.getElementById('ampelIcon');
+    const ampelText = document.getElementById('ampelText');
+    const ampelDescription = document.getElementById('ampelDescription');
+    
     // Ampel
-    const ampelIcons = { gruen: '🟢', gelb: '🟡', rot: '🔴' };
-    const ampelTexts = { gruen: 'GRÜN - UNAUFFÄLLIG', gelb: 'GELB - PRÜFBEDARF', rot: 'ROT - KRITISCH' };
-    const ampelDescriptions = {
-        gruen: 'Ihr Vertrag ist unauffällig. Die wichtigsten Punkte sind klar geregelt.',
-        gelb: 'Ihr Vertrag enthält Punkte, die Sie genauer prüfen sollten.',
-        rot: 'Achtung! Ihr Vertrag enthält kritische Punkte, die vor Unterschrift geklärt werden sollten.'
-    };
-
-    document.getElementById('ampelIcon').textContent = ampelIcons[data.ampel] || '🚦';
-    document.getElementById('ampelText').textContent = ampelTexts[data.ampel] || 'BEWERTUNG';
-    document.getElementById('ampelText').className = `ampel-text ${data.ampel}`;
-    document.getElementById('ampelDescription').textContent = ampelDescriptions[data.ampel] || '';
-
+    const ampel = data.ampel || 'gelb';
+    ampelText.textContent = ampel.toUpperCase();
+    ampelText.className = 'ampel-text ampel-' + ampel;
+    
+    if (ampel === 'rot') {
+        ampelIcon.textContent = '🔴';
+        ampelDescription.textContent = 'Hohe Risiken identifiziert - Vorsicht geboten';
+    } else if (ampel === 'gelb') {
+        ampelIcon.textContent = '🟡';
+        ampelDescription.textContent = 'Mittlere Risiken - Prüfung empfohlen';
+    } else {
+        ampelIcon.textContent = '🟢';
+        ampelDescription.textContent = 'Geringe Risiken - Vertrag erscheint akzeptabel';
+    }
+    
     // Risiken
     const risikenList = document.getElementById('risikenList');
     risikenList.innerHTML = '';
@@ -231,7 +254,7 @@ function displayResults(data) {
         li.textContent = risiko.beschreibung || risiko;
         risikenList.appendChild(li);
     });
-
+    
     // Empfehlungen
     const empfehlungenList = document.getElementById('empfehlungenList');
     empfehlungenList.innerHTML = '';
@@ -240,62 +263,38 @@ function displayResults(data) {
         li.textContent = emp;
         empfehlungenList.appendChild(li);
     });
-
-    // Mail
-    document.getElementById('mailPreview').textContent = data.mail?.text || 'Keine E-Mail-Vorlage verfügbar';
-}
-
-function resetAnalysis() {
-    document.getElementById('results').classList.remove('active');
-    document.querySelector('.upload-container').style.display = 'block';
-    removeFile();
-}
-
-// ==================== DRAG & DROP ====================
-
-window.addEventListener('DOMContentLoaded', () => {
-    // Check if user is already logged in
-    const token = localStorage.getItem('token');
-    if (token) {
-        showDashboard();
-    }
-
-    // Drag and drop support
-    const uploadArea = document.querySelector('.upload-area');
     
-    if (uploadArea) {
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            uploadArea.addEventListener(eventName, (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-            });
-        });
-
-        ['dragenter', 'dragover'].forEach(eventName => {
-            uploadArea.addEventListener(eventName, () => {
-                uploadArea.style.borderColor = '#ff8c42';
-                uploadArea.style.transform = 'scale(1.02)';
-            });
-        });
-
-        ['dragleave', 'drop'].forEach(eventName => {
-            uploadArea.addEventListener(eventName, () => {
-                uploadArea.style.borderColor = '#ffc099';
-                uploadArea.style.transform = 'scale(1)';
-            });
-        });
-
-        uploadArea.addEventListener('drop', (e) => {
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                const file = files[0];
-                if (file.type === 'application/pdf') {
-                    document.getElementById('fileInput').files = files;
-                    handleFileSelect({ target: { files: [file] } });
-                } else {
-                    alert('Bitte laden Sie nur PDF-Dateien hoch');
-                }
-            }
-        });
+    // Mail
+    const mailPreview = document.getElementById('mailPreview');
+    if (data.mail && data.mail.text) {
+        mailPreview.innerHTML = `<pre>${data.mail.text}</pre>`;
+    } else {
+        mailPreview.textContent = 'Keine E-Mail-Vorlage verfügbar';
     }
-});
+    
+    results.style.display = 'block';
+}
+
+// ==================== RESET ANALYSIS ====================
+function resetAnalysis() {
+    removeFile();
+    document.getElementById('results').style.display = 'none';
+}
+
+// ==================== MESSAGES ====================
+function showError(message) {
+    const errorDiv = document.getElementById('error');
+    errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
+}
+
+function showSuccess(message) {
+    const successDiv = document.getElementById('success');
+    successDiv.textContent = message;
+    successDiv.style.display = 'block';
+}
+
+function clearMessages() {
+    document.getElementById('error').style.display = 'none';
+    document.getElementById('success').style.display = 'none';
+}
