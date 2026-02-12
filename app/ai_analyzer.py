@@ -10,7 +10,6 @@ def analyze_contract(text: str) -> dict:
     Analysiert einen Vertragstext mit Claude (Anthropic) und gibt strukturierte Daten zurück
     """
     
-    # DEBUGGING
     print(f"=== DEBUG START ===")
     print(f"API_KEY gesetzt: {bool(API_KEY)}")
     if API_KEY:
@@ -25,7 +24,7 @@ def analyze_contract(text: str) -> dict:
     headers = {
         "x-api-key": API_KEY,
         "anthropic-version": "2023-06-01",
-        "Content-Type": "application/json"
+        "content-type": "application/json"
     }
     
     system_prompt = (
@@ -55,19 +54,40 @@ Vertragstext:
 """
     
     payload = {
-        "model": "claude-3-5-haiku-20241022",  # Günstigstes Modell
+        "model": "claude-3-5-haiku-20241022",
         "max_tokens": 1024,
         "system": system_prompt,
         "messages": [
-            {"role": "user", "content": user_prompt}
+            {
+                "role": "user",
+                "content": user_prompt
+            }
         ]
     }
     
     try:
-        response = requests.post(API_URL, headers=headers, json=payload, timeout=120)
-        response.raise_for_status()
+        print(f"🔍 Sende Request an Claude...")
+        print(f"📍 URL: {API_URL}")
+        print(f"🤖 Model: {payload['model']}")
         
-        content = response.json()["content"][0]["text"]
+        response = requests.post(API_URL, headers=headers, json=payload, timeout=120)
+        
+        print(f"📊 Response Status: {response.status_code}")
+        
+        if response.status_code != 200:
+            error_text = response.text
+            print(f"❌ ERROR RESPONSE: {error_text}")
+            try:
+                error_data = response.json()
+                error_msg = error_data.get('error', {}).get('message', error_text)
+            except:
+                error_msg = error_text
+            raise Exception(f"Claude API Error ({response.status_code}): {error_msg}")
+        
+        response_data = response.json()
+        content = response_data["content"][0]["text"]
+        
+        print(f"✅ Claude Antwort erhalten, Länge: {len(content)}")
         
         # Entferne mögliche Markdown-Formatierung
         content = content.strip()
@@ -82,9 +102,11 @@ Vertragstext:
         # Parse JSON
         try:
             data = json.loads(content)
+            print(f"✅ JSON erfolgreich geparst")
             return data
-        except json.JSONDecodeError:
-            # Fallback wenn JSON kaputt ist
+        except json.JSONDecodeError as je:
+            print(f"⚠️ JSON Parse Error: {je}")
+            print(f"⚠️ Content: {content[:200]}")
             return {
                 "leistungsumfang": "Analyse fehlgeschlagen - bitte versuchen Sie es erneut",
                 "laufzeit_monate": None,
@@ -99,6 +121,8 @@ Vertragstext:
     except requests.exceptions.Timeout:
         raise Exception("API Timeout - bitte versuchen Sie es erneut")
     except requests.exceptions.RequestException as e:
-        raise Exception(f"API Fehler: {str(e)}")
+        print(f"❌ Request Exception: {str(e)}")
+        raise Exception(f"Claude API Fehler: {str(e)}")
     except Exception as e:
+        print(f"❌ Unerwarteter Fehler: {str(e)}")
         raise Exception(f"Analyse fehlgeschlagen: {str(e)}")
