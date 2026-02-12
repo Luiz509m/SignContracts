@@ -56,7 +56,7 @@ Vertragstext:
     }
     
     try:
-        response = requests.post(API_URL, headers=headers, json=payload, timeout=60)
+        response = requests.post(API_URL, headers=headers, json=payload, timeout=120)
         response.raise_for_status()
         
         content = response.json()["choices"][0]["message"]["content"]
