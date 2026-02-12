@@ -3,18 +3,28 @@ import requests
 import json
 
 API_KEY = os.getenv("LLM_API_KEY")
-API_URL = "https://api.openai.com/v1/chat/completions"
+API_URL = "https://api.anthropic.com/v1/messages"
 
 def analyze_contract(text: str) -> dict:
     """
-    Analysiert einen Vertragstext mit OpenAI und gibt strukturierte Daten zurück
+    Analysiert einen Vertragstext mit Claude (Anthropic) und gibt strukturierte Daten zurück
     """
+    
+    # DEBUGGING
+    print(f"=== DEBUG START ===")
+    print(f"API_KEY gesetzt: {bool(API_KEY)}")
+    if API_KEY:
+        print(f"API_KEY beginnt mit: {API_KEY[:15]}...")
+        print(f"API_KEY Länge: {len(API_KEY)}")
+    print(f"Text Länge: {len(text)}")
+    print(f"=== DEBUG ENDE ===")
     
     if not API_KEY:
         raise ValueError("LLM_API_KEY nicht gesetzt")
     
     headers = {
-        "Authorization": f"Bearer {API_KEY}",
+        "x-api-key": API_KEY,
+        "anthropic-version": "2023-06-01",
         "Content-Type": "application/json"
     }
     
@@ -29,7 +39,6 @@ def analyze_contract(text: str) -> dict:
     user_prompt = f"""
 Analysiere den folgenden Vertragstext und extrahiere die Informationen.
 Antworte ausschließlich im folgenden JSON-Format (ohne ```json oder andere Formatierung):
-
 {{
   "leistungsumfang": "string oder null",
   "laufzeit_monate": number oder null,
@@ -46,20 +55,19 @@ Vertragstext:
 """
     
     payload = {
-        "model": "gpt-4o-mini",
+        "model": "claude-haiku-4-20250514",  # Günstigstes Modell
+        "max_tokens": 1024,
+        "system": system_prompt,
         "messages": [
-            {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
-        ],
-        "temperature": 0,
-        "max_tokens": 500
+        ]
     }
     
     try:
         response = requests.post(API_URL, headers=headers, json=payload, timeout=120)
         response.raise_for_status()
         
-        content = response.json()["choices"][0]["message"]["content"]
+        content = response.json()["content"][0]["text"]
         
         # Entferne mögliche Markdown-Formatierung
         content = content.strip()
@@ -89,8 +97,8 @@ Vertragstext:
             }
     
     except requests.exceptions.Timeout:
-        raise Exception("OpenAI API Timeout - bitte versuchen Sie es erneut")
+        raise Exception("API Timeout - bitte versuchen Sie es erneut")
     except requests.exceptions.RequestException as e:
-        raise Exception(f"OpenAI API Fehler: {str(e)}")
+        raise Exception(f"API Fehler: {str(e)}")
     except Exception as e:
         raise Exception(f"Analyse fehlgeschlagen: {str(e)}")
