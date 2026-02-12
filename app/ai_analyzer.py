@@ -55,7 +55,7 @@ Vertragstext:
 """
     
     payload = {
-        "model": "claude-haiku-4-20250514",  # Günstigstes Modell
+        "model": "claude-3-5-haiku-20241022",  # Günstigstes Modell
         "max_tokens": 1024,
         "system": system_prompt,
         "messages": [
