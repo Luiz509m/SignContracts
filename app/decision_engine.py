@@ -1,154 +1,197 @@
 def build_decision_output(analysis: dict) -> dict:
     """
-    Wandelt die KI-Analyse in ein strukturiertes Format um
-    mit Ampel-Bewertung, Risiken und Empfehlungen
+    Erstellt die finale Ausgabe mit Ampel, Risiken und Empfehlungen
+    Funktioniert für ALLE Vertragstypen
     """
     
-    # Ampel-Logik
-    ampel = calculate_ampel(analysis)
+    contract_type = analysis.get("vertragstyp", "SONSTIGES")
     
-    # Risiken identifizieren
-    risiken = identify_risks(analysis)
+    # Risiken sammeln
+    top_risiken = analysis.get("top_risiken", [])
+    
+    # Weitere Risiken basierend auf Vertragstyp identifizieren
+    additional_risks = identify_risks_by_type(analysis, contract_type)
+    
+    # Alle Risiken kombinieren
+    all_risks = top_risiken + additional_risks
+    
+    # Duplikate entfernen, max 5 Risiken
+    unique_risks = []
+    for risk in all_risks:
+        if risk not in unique_risks and len(unique_risks) < 5:
+            unique_risks.append(risk)
+    
+    # Ampel-Bewertung
+    ampel = calculate_ampel(analysis, contract_type, len(unique_risks))
     
     # Empfehlungen generieren
-    empfehlungen = generate_recommendations(analysis)
+    empfehlungen = generate_recommendations(analysis, contract_type, ampel)
     
     # E-Mail-Vorlage
-    mail = generate_mail_template(analysis, risiken)
+    mail_text = generate_email(analysis, contract_type, unique_risks)
     
     return {
         "ampel": ampel,
-        "top_risiken": risiken,
+        "vertragstyp": get_type_label(contract_type),
+        "top_risiken": [{"beschreibung": r} for r in unique_risks] if unique_risks else [{"beschreibung": "Keine kritischen Risiken identifiziert"}],
         "empfehlungen": empfehlungen,
-        "mail": {"text": mail},
-        "raw_data": analysis
+        "mail": {"text": mail_text}
     }
 
 
-def calculate_ampel(data: dict) -> str:
-    """Berechnet Ampel-Status basierend auf Vertragsdaten"""
-    risk_score = 0
+def identify_risks_by_type(analysis: dict, contract_type: str) -> list:
+    """Identifiziert Risiken basierend auf Vertragstyp"""
     
-    # Automatische Verlängerung = Risiko
-    if data.get("automatische_verlaengerung", False):
-        risk_score += 2
+    risks = []
     
-    # Lange Laufzeit = Risiko
-    laufzeit = data.get("laufzeit_monate", 0) or 0
-    if laufzeit > 24:
-        risk_score += 2
-    elif laufzeit > 12:
-        risk_score += 1
+    if contract_type == "IT_SERVICE":
+        if not analysis.get("sla_vorhanden"):
+            risks.append("Keine Service Level Agreements (SLA) definiert")
+        if analysis.get("automatische_verlaengerung"):
+            risks.append("Automatische Vertragsverlängerung ohne Kündigungsoption")
+        if not analysis.get("haftung_datenverlust"):
+            risks.append("Haftung bei Datenverlust nicht geregelt")
     
-    # Fehlende SLAs = Risiko
-    if not data.get("sla_vorhanden", False):
-        risk_score += 1
+    elif contract_type == "HANDWERK":
+        anzahlung = analysis.get("anzahlung_prozent", 0)
+        if anzahlung and anzahlung > 30:
+            risks.append(f"Hohe Anzahlung von {anzahlung}% verlangt")
+        if not analysis.get("vertragsstrafe_bei_verzug"):
+            risks.append("Keine Vertragsstrafe bei Verzug vereinbart")
+        if analysis.get("haftung_beschraenkt"):
+            risks.append("Haftung des Auftragnehmers stark eingeschränkt")
+        gewaehrleistung = analysis.get("gewaehrleistung_monate", 0)
+        if gewaehrleistung and gewaehrleistung < 12:
+            risks.append(f"Kurze Gewährleistung von nur {gewaehrleistung} Monaten")
     
-    # Unklare Haftung = Risiko
-    if not data.get("haftung_datenverlust"):
-        risk_score += 2
+    elif contract_type == "MIETVERTRAG":
+        if analysis.get("indexierung"):
+            risks.append("Mietpreisindexierung vereinbart - Miete kann steigen")
+        kaution = analysis.get("kaution_betrag", 0)
+        miete = analysis.get("miete_monatlich", 0)
+        if kaution and miete and kaution > (miete * 3):
+            risks.append("Kaution höher als 3 Monatsmieten")
+        if analysis.get("kleinreparaturen_mieter"):
+            grenze = analysis.get("kleinreparaturen_grenze", 0)
+            risks.append(f"Kleinreparaturen zu Lasten Mieter (bis CHF {grenze})")
     
-    # Preisanpassungsklausel = Risiko
-    if data.get("preisanpassung_vorhanden", False):
-        risk_score += 1
+    elif contract_type == "ARBEITSVERTRAG":
+        if analysis.get("konkurrenzverbot"):
+            risks.append("Konkurrenzverbot nach Vertragsende vereinbart")
+        probezeit = analysis.get("probezeit_monate", 0)
+        if probezeit and probezeit > 3:
+            risks.append(f"Lange Probezeit von {probezeit} Monaten")
+        urlaubstage = analysis.get("urlaubstage", 0)
+        if urlaubstage and urlaubstage < 20:
+            risks.append(f"Wenig Urlaubstage ({urlaubstage} Tage pro Jahr)")
     
-    # Ampel-Bewertung
-    if risk_score >= 5:
+    elif contract_type == "KAUFVERTRAG":
+        if not analysis.get("ruecktrittsrecht"):
+            risks.append("Kein Rücktrittsrecht vereinbart")
+        gewaehrleistung = analysis.get("gewaehrleistung_monate", 0)
+        if gewaehrleistung and gewaehrleistung < 12:
+            risks.append(f"Kurze Gewährleistung von nur {gewaehrleistung} Monaten")
+    
+    return risks
+
+
+def calculate_ampel(analysis: dict, contract_type: str, risk_count: int) -> str:
+    """Berechnet Ampel-Status"""
+    
+    # Basis-Bewertung nach Risikoanzahl
+    if risk_count >= 4:
         return "rot"
-    elif risk_score >= 2:
+    elif risk_count >= 2:
         return "gelb"
-    else:
-        return "gruen"
+    
+    # Typ-spezifische kritische Faktoren
+    if contract_type == "HANDWERK":
+        anzahlung = analysis.get("anzahlung_prozent", 0)
+        if anzahlung and anzahlung > 40:
+            return "rot"
+        if analysis.get("haftung_beschraenkt") and not analysis.get("vertragsstrafe_bei_verzug"):
+            return "gelb"
+    
+    elif contract_type == "IT_SERVICE":
+        if not analysis.get("sla_vorhanden") and analysis.get("automatische_verlaengerung"):
+            return "gelb"
+    
+    elif contract_type == "MIETVERTRAG":
+        kaution = analysis.get("kaution_betrag", 0)
+        miete = analysis.get("miete_monatlich", 0)
+        if kaution and miete and kaution > (miete * 3):
+            return "gelb"
+    
+    return "gruen"
 
 
-def identify_risks(data: dict) -> list:
-    """Identifiziert konkrete Risiken im Vertrag"""
-    risiken = []
+def generate_recommendations(analysis: dict, contract_type: str, ampel: str) -> list:
+    """Generiert Handlungsempfehlungen"""
     
-    if data.get("automatische_verlaengerung", False):
-        risiken.append({
-            "beschreibung": "Automatische Vertragsverlängerung ohne aktive Zustimmung"
-        })
-    
-    laufzeit = data.get("laufzeit_monate", 0) or 0
-    if laufzeit > 24:
-        risiken.append({
-            "beschreibung": f"Lange Vertragslaufzeit von {laufzeit} Monaten - eingeschränkte Flexibilität"
-        })
-    
-    if not data.get("sla_vorhanden", False):
-        risiken.append({
-            "beschreibung": "Keine Service Level Agreements (SLA) definiert - unklare Leistungsgarantien"
-        })
-    
-    if not data.get("haftung_datenverlust"):
-        risiken.append({
-            "beschreibung": "Haftung bei Datenverlust nicht klar geregelt"
-        })
-    
-    if data.get("preisanpassung_vorhanden", False):
-        risiken.append({
-            "beschreibung": "Anbieter kann Preise einseitig anpassen"
-        })
-    
-    if data.get("zusatzkosten_nach_aufwand", False):
-        risiken.append({
-            "beschreibung": "Zusatzkosten nach Aufwand - Budget schwer planbar"
-        })
-    
-    # Falls keine Risiken gefunden
-    if not risiken:
-        risiken.append({
-            "beschreibung": "Keine kritischen Risiken identifiziert"
-        })
-    
-    return risiken
-
-
-def generate_recommendations(data: dict) -> list:
-    """Generiert konkrete Handlungsempfehlungen"""
     empfehlungen = []
     
-    if data.get("automatische_verlaengerung", False):
-        empfehlungen.append("Nachverhandeln: Klausel zur automatischen Verlängerung ändern oder Kündigungsfrist verkürzen")
+    if ampel == "rot":
+        empfehlungen.append("⚠️ Vertrag NICHT in aktueller Form unterschreiben")
+        empfehlungen.append("Nachverhandlung dringend empfohlen")
+    elif ampel == "gelb":
+        empfehlungen.append("⚠️ Vertrag kritisch prüfen vor Unterschrift")
+        empfehlungen.append("Kritische Punkte klären oder anpassen lassen")
+    else:
+        empfehlungen.append("✅ Vertrag erscheint weitgehend akzeptabel")
     
-    if not data.get("sla_vorhanden", False):
-        empfehlungen.append("SLA-Vereinbarung einfordern mit konkreten Verfügbarkeitsgarantien (z.B. 99,5%)")
+    # Typ-spezifische Empfehlungen
+    if contract_type == "HANDWERK":
+        if not analysis.get("vertragsstrafe_bei_verzug"):
+            empfehlungen.append("Vertragsstrafe bei Verzug vereinbaren")
+        if analysis.get("haftung_beschraenkt"):
+            empfehlungen.append("Haftungsregelungen nachverhandeln")
     
-    if not data.get("haftung_datenverlust"):
-        empfehlungen.append("Haftungsregelungen präzisieren, besonders für Datenverlust und Ausfallzeiten")
+    elif contract_type == "IT_SERVICE":
+        if not analysis.get("sla_vorhanden"):
+            empfehlungen.append("Service Level Agreements (SLA) definieren lassen")
+        if not analysis.get("datenschutz_erwähnt"):
+            empfehlungen.append("Datenschutz-Klauseln ergänzen (DSGVO/DSG)")
     
-    if data.get("preisanpassung_vorhanden", False):
-        empfehlungen.append("Preisanpassungsklausel begrenzen (z.B. max. Inflationsrate, Zustimmungsvorbehalt)")
+    elif contract_type == "MIETVERTRAG":
+        empfehlungen.append("Wohnungsübergabeprotokoll bei Einzug erstellen")
+        if analysis.get("indexierung"):
+            empfehlungen.append("Indexierung prüfen und ggf. begrenzen lassen")
     
-    laufzeit = data.get("laufzeit_monate", 0) or 0
-    if laufzeit > 24:
-        empfehlungen.append("Kürzere Vertragslaufzeit vereinbaren oder Sonderkündigungsrecht bei Änderungen")
+    elif contract_type == "ARBEITSVERTRAG":
+        empfehlungen.append("Vertrag von Fachanwalt prüfen lassen")
+        if analysis.get("konkurrenzverbot"):
+            empfehlungen.append("Konkurrenzverbot zeitlich/geografisch begrenzen lassen")
     
-    # Falls keine spezifischen Empfehlungen
-    if not empfehlungen:
-        empfehlungen.append("Vertrag scheint ausgeglichen - vor Unterschrift nochmals komplett durchlesen")
+    empfehlungen.append("Hinweis: Diese Analyse ersetzt keine Rechtsberatung")
     
     return empfehlungen
 
 
-def generate_mail_template(data: dict, risiken: list) -> str:
+def generate_email(analysis: dict, contract_type: str, risks: list) -> str:
     """Generiert E-Mail-Vorlage für Rückfragen"""
     
-    leistungsumfang = data.get("leistungsumfang", "die angebotenen Leistungen")
+    type_labels = {
+        "IT_SERVICE": "IT-Service-Vertrag",
+        "HANDWERK": "Handwerksvertrag",
+        "MIETVERTRAG": "Mietvertrag",
+        "ARBEITSVERTRAG": "Arbeitsvertrag",
+        "KAUFVERTRAG": "Kaufvertrag",
+        "DIENSTLEISTUNG": "Dienstleistungsvertrag",
+        "SONSTIGES": "Vertrag"
+    }
+    
+    contract_label = type_labels.get(contract_type, "Vertrag")
     
     mail = f"""Sehr geehrte Damen und Herren,
 
-vielen Dank für Ihr Vertragsangebot bezüglich {leistungsumfang}.
+vielen Dank für Ihr Vertragsangebot bezüglich {contract_label}.
 
 Nach Prüfung des Vertrags haben wir folgende Rückfragen:
 
 """
     
-    # Füge Risiken als Rückfragen hinzu
-    for i, risiko in enumerate(risiken[:3], 1):  # Max. 3 Hauptpunkte
-        beschreibung = risiko.get("beschreibung", "")
-        mail += f"{i}. {beschreibung}\n   Können wir hier eine Anpassung vereinbaren?\n\n"
+    for i, risk in enumerate(risks[:4], 1):  # Max 4 Punkte in E-Mail
+        mail += f"{i}. {risk}\n   Können wir hier eine Anpassung vereinbaren?\n\n"
     
     mail += """Wir würden uns freuen, diese Punkte gemeinsam zu klären, um eine für beide Seiten faire Vereinbarung zu treffen.
 
@@ -157,3 +200,19 @@ Für ein kurzes Telefonat oder Meeting stehen wir gerne zur Verfügung.
 Mit freundlichen Grüßen"""
     
     return mail
+
+
+def get_type_label(contract_type: str) -> str:
+    """Gibt deutschen Label für Vertragstyp zurück"""
+    
+    labels = {
+        "IT_SERVICE": "IT-Service / Wartung",
+        "HANDWERK": "Handwerk / Bau",
+        "MIETVERTRAG": "Mietvertrag",
+        "ARBEITSVERTRAG": "Arbeitsvertrag",
+        "KAUFVERTRAG": "Kaufvertrag",
+        "DIENSTLEISTUNG": "Dienstleistung",
+        "SONSTIGES": "Allgemeiner Vertrag"
+    }
+    
+    return labels.get(contract_type, "Unbekannt")
